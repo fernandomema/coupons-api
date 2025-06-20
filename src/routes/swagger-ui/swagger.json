@@ -1,0 +1,149 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Coupons API",
+    "version": "1.0.0",
+    "description": "API for coupon management and key generation."
+  },
+  "paths": {
+    "/api/keys": {
+      "post": {
+        "summary": "Generate public/private key pair",
+        "responses": {
+          "201": {
+            "description": "Keys generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "publicKey": { "type": "string" },
+                    "privateKey": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "500": { "description": "Internal Error" }
+        }
+      }
+    },
+    "/api/coupons": {
+      "post": {
+        "summary": "Create a new coupon",
+        "description": "Creates a new coupon. Requires authentication via x-private-key header.",
+        "parameters": [
+          {
+            "name": "x-private-key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Private API key"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": { "type": "string" },
+                  "maxUses": { "type": "integer" },
+                  "description": { "type": "string" }
+                },
+                "required": ["code", "maxUses"]
+              }
+            }
+          },
+          "responses": {
+            "201": { "description": "Coupon created" },
+            "400": { "description": "Missing data" },
+            "401": { "description": "Unauthorized" },
+            "500": { "description": "Internal Error" }
+          }
+        }
+      },
+      "get": {
+        "summary": "List all coupons",
+        "description": "Retorna los cupones agrupados por clave pública. Si no se provee la cabecera x-private-key, la x-public-key es requerida.",
+        "parameters": [
+          {
+            "name": "x-private-key",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Private API key opcional para obtener todos los cupones asociados a la clave pública."
+          },
+          {
+            "name": "x-public-key",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Public API key (requerida si no se provee x-private-key)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de cupones agrupados por clave pública.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "integer" },
+                        "code": { "type": "string" },
+                        "maxUses": { "type": "integer" },
+                        "usesLeft": { "type": "integer" },
+                        "description": { "type": "string" },
+                        "createdBy": { "type": "integer" },
+                        "public": { "type": "boolean" }
+                      }
+                    }
+                  },
+                  "description": "Objeto donde cada clave es una publicKey y su valor es un array de cupones asociados."
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Validate and consume a coupon",
+        "description": "Validates and consumes a coupon by code. Requiere x-public-key.",
+        "parameters": [
+          {
+            "name": "x-public-key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Public API key"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": { "type": "string" }
+                },
+                "required": ["code"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Coupon consumed" },
+          "400": { "description": "Missing code or no uses left" },
+          "404": { "description": "Coupon not found" }
+        }
+      }
+    }
+  }
+}
